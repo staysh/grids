@@ -24,7 +24,7 @@
 #ifndef GRIDS_H
 #define GRIDS_H
 
-
+#include "Arduino.h"
 #include "USBHost_t36.h"
 
 #define REQUEST_DEVICE_INFO 0x00
@@ -44,7 +44,7 @@
 #define SET_ROW_LEVEL 0x1B  //use d_8 type
 #define SET_COL_LEVEL 0x1C  //use d_8 type
 
-typedef void(*CBPtr)(bool, int, int);
+typedef void(*CBPtr)(bool, uint8_t, uint8_t);
 
 typedef uint8_t d_8[8];
 typedef uint8_t d_32[32];
@@ -123,6 +123,8 @@ class Grid : public GridBase
     typedef bool keys_[N];
     levels_& levels() { return level; }
     keys_& keys() { return key; }
+    uint8_t xy2i (uint8_t x, uint8_t y) { return (x - offset.x) + (y - offset.y) * size.i; }
+    Point i2xy (uint8_t i) {return Point( { (i % size.i) + offset.x, (i / size.j) + offset.y} ); }  
 };
 
 template<uint8_t gridSize, uint8_t layers>
@@ -138,7 +140,7 @@ class Grids
     USBSerial serial = USBSerial(usb);
   public:
     Grids() {};
-    
+    //Grids(uint8_t gs, uint8_t
     void init_()
     {
       usb.begin();
@@ -148,16 +150,16 @@ class Grids
     void addGridCallback(GridBase* const g, uint8_t z, CBPtr cb)
     {
       //get b-box
-      int x2, y2;
+      uint8_t x2, y2;
       x2 = g->offset.x + g->size.i;
       y2 = g->offset.y + g->size.j;
       
       //put CBPtrs in table, turn active to true
-      for(int x = g->offset.x; x < x2; x++)
+      for(uint8_t x = g->offset.x; x < x2; x++)
       {
-        for( int y = g->offset.y; y < y2; y++)
+        for( uint8_t y = g->offset.y; y < y2; y++)
         {
-          int index = x + (y * rowSize) + (z * gridSize);
+          uint8_t index = x + (y * rowSize) + (z * gridSize);
           funcTable[index] = cb;
           active[index] = true;
         }
@@ -168,7 +170,7 @@ class Grids
     {
       while(serial.available())
       {
-        int dest, x, y, index;
+        uint8_t dest, x, y, index;
         dest = serial.read();
         if ( dest == 0x21 || dest == 0x20)
         {
